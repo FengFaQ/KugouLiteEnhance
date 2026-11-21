@@ -83,7 +83,9 @@ public final class AutoClaimVipHook extends BaseHook {
         Set<Method> out = new HashSet<>();
         String[] names = nonEmpty(rule.methodName);
         String[] strings = nonEmpty(rule.stringConstants);
-        if (names.length == 0) names = new String[]{"a", "report"};
+        // 2.5.5: a(String,long,long); 5.3.21: c(String,long,long,boolean).
+        // playStart/playEnd stay at arg indexes 1/2 in both, so hookReport works for both.
+        if (names.length == 0) names = new String[]{"a", "c", "report"};
         for (String name : names) {
             for (String s : strings) {
                 MethodMatcher mm = new MethodMatcher();
@@ -108,17 +110,23 @@ public final class AutoClaimVipHook extends BaseHook {
     private Set<Method> findAdCloseMethods() {
         Set<Method> out = new HashSet<>();
         String[] classes = nonEmpty(rule.classNameContains);
+        // 2.5.5: onADClose; 5.3.21 IGetVipListener: onAdClose (lowercase 'd').
+        String[] closeNames = {"onADClose", "onAdClose"};
         for (String cls : classes) {
-            MethodMatcher mm = new MethodMatcher();
-            mm.name("onADClose");
-            mm.declaredClass(cls.replace('.', '/'), StringMatchType.Contains, false);
-            collect(out, mm);
+            for (String closeName : closeNames) {
+                MethodMatcher mm = new MethodMatcher();
+                mm.name(closeName);
+                mm.declaredClass(cls.replace('.', '/'), StringMatchType.Contains, false);
+                collect(out, mm);
+            }
         }
-        // Fallback: onADClose co-occurring with the toast anchor.
-        MethodMatcher alt = new MethodMatcher();
-        alt.name("onADClose");
-        alt.addUsingString(REWARD_TOAST, StringMatchType.Contains, false);
-        collect(out, alt);
+        // Fallback: close callback co-occurring with the toast anchor.
+        for (String closeName : closeNames) {
+            MethodMatcher alt = new MethodMatcher();
+            alt.name(closeName);
+            alt.addUsingString(REWARD_TOAST, StringMatchType.Contains, false);
+            collect(out, alt);
+        }
         return out;
     }
 
