@@ -7,7 +7,7 @@ import java.lang.reflect.Method;
 import java.util.Set;
 
 import de.robv.android.xposed.XC_MethodReplacement;
-import de.robv.android.xposed.XposedHelpers;
+import de.robv.android.xposed.XposedBridge;
 
 /**
  * Hook type: force a method to return a constant (false / null / void).
@@ -27,7 +27,7 @@ public final class ReturnConstantHook extends BaseHook {
         Object value = rule.hasValue ? rule.value : defaultValue(rule.returnType);
         for (Method m : targets) {
             try {
-                XposedHelpers.hookMethod(m, XC_MethodReplacement.returnConstant(value));
+                XposedBridge.hookMethod(m, XC_MethodReplacement.returnConstant(value));
                 XposedLog.d("ReturnConstantHook applied: " + rule.id + " -> " + m.getName());
             } catch (Throwable t) {
                 XposedLog.e("ReturnConstantHook failed on " + m.getName(), t);

@@ -48,7 +48,7 @@ public final class ModuleMain implements IXposedHookLoadPackage, IXposedHookZygo
             HookConfig config = loadConfig();
             DexKitBridge bridge = null;
             try {
-                bridge = DexKitBridge.create(lpparam.classLoader);
+                bridge = DexKitBridge.create(lpparam.classLoader, false);
             } catch (Throwable t) {
                 XposedLog.w("DexKit bridge unavailable; feature discovery degraded: " + t);
             }

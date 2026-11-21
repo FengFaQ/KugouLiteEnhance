@@ -7,7 +7,7 @@ import java.lang.reflect.Method;
 import java.util.Set;
 
 import de.robv.android.xposed.XC_MethodReplacement;
-import de.robv.android.xposed.XposedHelpers;
+import de.robv.android.xposed.XposedBridge;
 
 /**
  * Hook type: replace a method's logic entirely. Used for H5 intercept rewrite.
@@ -25,7 +25,7 @@ public final class MethodReplaceHook extends BaseHook {
     public void apply() {
         for (Method m : targets) {
             try {
-                XposedHelpers.hookMethod(m, new XC_MethodReplacement() {
+                XposedBridge.hookMethod(m, new XC_MethodReplacement() {
                     @Override
                     protected Object replaceHookedMethod(MethodHookParam param) {
                         // H5 intercept: short-circuit "网络繁忙，请稍后重试" path.

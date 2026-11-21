@@ -1,9 +1,6 @@
-// Top-level build file
-buildscript {
-    ext.kotlin_version = '1.9.24'
-    dependencies {
-        classpath 'com.android.tools.build:gradle:8.5.2'
-    }
+// Top-level build file — plugins DSL (repositories declared in settings.gradle)
+plugins {
+    id 'com.android.application' version '8.5.2' apply false
 }
 
 tasks.register('clean', Delete) {

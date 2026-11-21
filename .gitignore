@@ -29,3 +29,7 @@ Thumbs.db
 *.keystore
 GITHUB_CREDENTIALS.md
 *.pat
+_apk255/
+_apk521/
+_v521scan/
+_vip_dec/

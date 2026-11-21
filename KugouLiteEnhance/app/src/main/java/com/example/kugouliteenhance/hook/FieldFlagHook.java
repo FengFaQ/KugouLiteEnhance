@@ -7,7 +7,7 @@ import java.lang.reflect.Method;
 import java.util.Set;
 
 import de.robv.android.xposed.XC_MethodReplacement;
-import de.robv.android.xposed.XposedHelpers;
+import de.robv.android.xposed.XposedBridge;
 
 /**
  * Hook type: force signature-check methods to report success (JAVA layer).
@@ -28,7 +28,7 @@ public final class FieldFlagHook extends BaseHook {
             try {
                 Class<?> rt = m.getReturnType();
                 Object passValue = (rt == boolean.class) ? true : null;
-                XposedHelpers.hookMethod(m, XC_MethodReplacement.returnConstant(passValue));
+                XposedBridge.hookMethod(m, XC_MethodReplacement.returnConstant(passValue));
                 XposedLog.d("FieldFlagHook applied: " + rule.id + " -> " + m.getName());
             } catch (Throwable t) {
                 XposedLog.e("FieldFlagHook failed on " + m.getName(), t);
