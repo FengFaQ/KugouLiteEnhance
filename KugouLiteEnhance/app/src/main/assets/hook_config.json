@@ -1,0 +1,105 @@
+{
+  "_comment": "酷狗概念版增强模块 - hook 特征配置。基于对啄木鸟_1.0.5.apk LXposed/Woodpecker/kugoulite/ 包的分析。混淆类名随版本变化，按特征匹配而非硬编码。",
+  "targetPackages": ["com.kugou.android.lite"],
+  "hooks": [
+    {
+      "id": "remove_home_banner",
+      "type": "ReturnConstantHook",
+      "description": "去除首页 Banner 广告",
+      "enabled": true,
+      "target": { "methodName": ["getBanner", "loadBanner", "showBanner"], "returnType": "android.view.View" },
+      "value": null
+    },
+    {
+      "id": "remove_search_banner",
+      "type": "ReturnConstantHook",
+      "description": "去除搜索页 Banner 广告",
+      "enabled": true,
+      "target": { "methodName": ["getSearchBanner", "showSearchAd"], "returnType": "android.view.View" },
+      "value": null
+    },
+    {
+      "id": "remove_tmeab_ad",
+      "type": "ReturnConstantHook",
+      "description": "去除 TMEAB 广告",
+      "enabled": true,
+      "target": { "methodNameContains": ["TMEAd", "TMEAB"], "returnType": "boolean" },
+      "value": false
+    },
+    {
+      "id": "remove_playpage_small_ad",
+      "type": "ReturnConstantHook",
+      "description": "去除播放页左下角小广告",
+      "enabled": true,
+      "target": { "methodNameContains": ["PlayPageAd", "MiniAd"], "returnType": "android.view.View" },
+      "value": null
+    },
+    {
+      "id": "disable_auto_update",
+      "type": "ReturnConstantHook",
+      "description": "关闭自动更新检测",
+      "enabled": true,
+      "target": { "methodName": ["checkUpdate", "getUpdateInfo", "requestUpdate"], "returnType": "void" },
+      "value": null
+    },
+    {
+      "id": "close_youth_dialog",
+      "type": "ReturnConstantHook",
+      "description": "关闭青年弹窗",
+      "enabled": true,
+      "target": { "methodNameContains": ["YouthDialog", "TeenDialog"], "returnType": "void" },
+      "value": null
+    },
+    {
+      "id": "block_vip_expire_card",
+      "type": "ReturnConstantHook",
+      "description": "拦截 VIP 到期卡片",
+      "enabled": true,
+      "target": { "methodNameContains": ["VipExpire", "VipCard"], "returnType": "java.util.List" },
+      "value": null
+    },
+    {
+      "id": "remove_lab_entry",
+      "type": "ReturnConstantHook",
+      "description": "移除发现页概念实验室",
+      "enabled": true,
+      "target": { "methodNameContains": ["LabCard", "ConceptLab"], "returnType": "java.util.List" },
+      "value": null
+    },
+    {
+      "id": "skip_guide_activity",
+      "type": "ActivityLaunchHook",
+      "description": "重写跳过引导页逻辑",
+      "enabled": true,
+      "target": { "classNameContains": ["Guide", "SplashGuide", "Welcome"] }
+    },
+    {
+      "id": "skip_splash_ad",
+      "type": "MethodAfterHook",
+      "description": "重写去除启动页广告逻辑",
+      "enabled": true,
+      "target": { "methodNameContains": ["SplashAd", "LaunchAd"], "returnType": "void" }
+    },
+    {
+      "id": "h5_intercept",
+      "type": "MethodReplaceHook",
+      "description": "重写 H5 界面拦截（网络繁忙请稍后重试）",
+      "enabled": true,
+      "target": { "methodNameContains": ["H5", "WebViewLoad"], "returnType": "boolean" }
+    },
+    {
+      "id": "bypass_signature_java",
+      "type": "FieldFlagHook",
+      "description": "绕过 JAVA 层签名校验",
+      "enabled": true,
+      "target": { "methodNameContains": ["checkSignature", "verifySign", "getSignature"] }
+    },
+    {
+      "id": "bypass_signature_so",
+      "type": "NativeHook",
+      "description": "绕过 SO 层签名校验（需随包提供 libkgsignaturehook.so；本工程提供接口占位）",
+      "enabled": false,
+      "target": { "nativeLibrary": "kgsignaturehook" }
+    }
+  ]
+}

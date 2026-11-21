@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">酷狗概念版增强</string>
+    <string name="module_desc">独立实现的酷狗概念版增强 LSP 模块</string>
+</resources>
