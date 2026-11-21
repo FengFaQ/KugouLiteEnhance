@@ -32,6 +32,7 @@ KugouLiteEnhance/
             │   ├── MethodAfterHook.java      # 方法执行后处理（启动页广告）
             │   ├── ActivityLaunchHook.java   # 拦截 Activity 启动（跳过引导页）
             │   ├── FieldFlagHook.java        # 签名校验字段/方法标志
+            │   ├── AutoClaimVipHook.java     # 2.5.5 移植：看广告领VIP自动化
             │   └── NativeHook.java           # SO 层 hook 扩展槽
             ├── util/XposedLog.java
             └── ui/MainActivity.java
@@ -48,12 +49,20 @@ KugouLiteEnhance/
 | `FieldFlagHook` | FieldFlagHook.java | `SignatureHook` forceLegalFlag |
 | `NativeHook` | NativeHook.java | `libkgsignaturehook.so` nativeInstall（扩展槽，默认关闭） |
 | `DexKitDiscovery` | DexKitHelper.java | `hookByDexKit`/`hookByCache` |
+| `AutoClaimVipHook` | AutoClaimVipHook.java | 2.5.5 `getvip` 包看广告领VIP自动化（新移植） |
 
 ## 特性
 
-- **配置驱动**：目标方法按名称/名称片段/返回类型匹配，混淆类名变化只需改 `hook_config.json`，无需改代码。
+- **配置驱动**：目标方法按名称/名称片段/类名片段/方法体内字符串常量/返回类型匹配，混淆类名变化只需改 `hook_config.json`，无需改代码。
+- **跨版本锚点**：新增 `classNameContains` 与 `stringConstants` 两类 DexKit 锚点，实测 2.5.5→5.3.21 运行时类名完全重写后仍能通过字符串常量命中目标方法（详见根目录 `LATEST_5.3.21_COMPAT.md`）。
 - **清晰分层**：入口 → 配置 → 调度 → 各 hook 类型，去掉参考样本的控制流平坦化与字符串加密，可读可维护。
 - **合规**：不捆绑参考样本的专有 SO；SO 层签名绕过仅保留接口扩展槽，默认关闭。
+
+## 最新版（5.3.21）兼容性
+
+依据 `LATEST_5.3.21_COMPAT.md` 对 5.3.21 的实测：包名仍为 `com.kugou.android.lite`（versionName 5.3.2），13 项原 hook 中 11 项功能仍存在、仅 H5 拦截可能变化；默认配置已改用新版类名/字符串锚点。`bypass_signature_so` 因 `libkgsignaturehook.so` 在新版中已移除而默认关闭。看广告领VIP机制的关键字符串锚点（`play_report`/`award_vip_hour`/`激励领取成功~`/`6033900901778954`）在 5.3.21 中仍存在，故 `auto_claim_vip` 已按新锚点配置。
+
+**关于「自动获取 VIP」的重要说明**：2.5.5 的自动领 VIP 本质是「看激励广告领 VIP」。客户端 `GdtSeeVideoManager` 播放 GDT 激励视频后，`AdPlayReportProtocol` 向 `gateway.kugou.com/youth/v1/ad/play_report` 上报，**服务端**依据返回的 `award_vip_hour` 真正发放 VIP。因此 `AutoClaimVipHook` 只能自动化客户端可做的部分（强制奖励标志、把上报的播放时长归一到 ≥15s），**无法绕过服务端校验直接发放 VIP**。完整机制见根目录 `VIP_2.5.5_ANALYSIS.md`。
 
 ## 构建
 

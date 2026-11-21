@@ -18,66 +18,114 @@ import java.util.Set;
  * Runtime feature discovery — the independent-module counterpart of the
  * reference sample's hookByDexKit / hookByCache / preloadDexKitCache.
  *
- * Targets are matched by method name / name fragments / return type instead
- * of hard-coded obfuscated symbols, so version upgrades only need config edits.
+ * Targets are matched by method name / name fragments, declaring class name
+ * fragments and string constants instead of hard-coded obfuscated symbols, so
+ * version upgrades only need config edits.
+ *
+ * Anchors within one category are alternatives (OR); method/class anchors and
+ * string anchors are run as SEPARATE queries and the results unioned. This
+ * avoids a zero-match caused by ANDing a string that does not co-occur with a
+ * method inside the same dex method. Both the matcher count and the resolved
+ * method count are capped so a broad anchor can never become hundreds of hooks.
  */
 public final class DexKitHelper {
 
+    private static final int MAX_MATCHERS = 32;
+    private static final int MAX_METHODS_PER_RULE = 48;
+
     private DexKitHelper() {}
 
-    /**
-     * Finds methods matching a rule using DexKit, then resolves them to real
-     * java.lang.reflect.Method objects through the target ClassLoader.
-     *
-     * DexKit's MethodMatcher holds a single name matcher, so each configured
-     * name / name-fragment is queried separately and the results are unioned.
-     */
     public static Set<Method> findMethods(DexKitBridge bridge, ClassLoader cl, HookRule rule) {
         Set<Method> result = new HashSet<>();
         if (bridge == null) return result;
 
-        // Build one matcher per configured name/fragment, all sharing the
-        // optional return-type constraint.
+        String[] exactNames = nonEmpty(rule.methodName);
+        String[] nameFrags = nonEmpty(rule.methodNameContains);
+        String[] classes = nonEmpty(rule.classNameContains);
+        String[] strings = nonEmpty(rule.stringConstants);
+
         List<MethodMatcher> matchers = new ArrayList<>();
-        for (String name : rule.methodName) {
-            if (name == null || name.isEmpty()) continue;
-            MethodMatcher m = new MethodMatcher().name(name);
-            applyReturnType(m, rule);
-            matchers.add(m);
+
+        // (1) Method/class anchors. Cross them (AND) so a fragment like
+        // "getBanner" resolves only inside the intended classes.
+        for (String name : exactNames) {
+            if (classes.length == 0) {
+                addMatcher(matchers, methodMatcher(name, null, null, rule));
+            } else {
+                for (String cls : classes) addMatcher(matchers, methodMatcher(name, null, cls, rule));
+            }
         }
-        for (String frag : rule.methodNameContains) {
-            if (frag == null || frag.isEmpty()) continue;
-            // Contains match on the method name.
-            MethodMatcher m = new MethodMatcher().name(frag, StringMatchType.Contains, false);
-            applyReturnType(m, rule);
-            matchers.add(m);
+        for (String frag : nameFrags) {
+            if (classes.length == 0) {
+                addMatcher(matchers, methodMatcher(null, frag, null, rule));
+            } else {
+                for (String cls : classes) addMatcher(matchers, methodMatcher(null, frag, cls, rule));
+            }
         }
-        // Return-type-only rule (no name info): a single matcher with just the
-        // return type would match everything, so skip it to stay safe.
+        if (exactNames.length == 0 && nameFrags.length == 0) {
+            for (String cls : classes) addMatcher(matchers, methodMatcher(null, null, cls, rule));
+        }
+
+        // (2) String anchors, one matcher each (DexKit ANDs multiple strings,
+        // but the config lists them as alternatives). When a class anchor is
+        // also present, narrow the string query to that class.
+        for (String s : strings) {
+            if (classes.length == 0) {
+                addMatcher(matchers, stringMatcher(s, null));
+            } else {
+                for (String cls : classes) addMatcher(matchers, stringMatcher(s, cls));
+            }
+        }
+
         if (matchers.isEmpty()) return result;
 
         for (MethodMatcher matcher : matchers) {
+            if (result.size() >= MAX_METHODS_PER_RULE) break;
             try {
                 List<MethodData> dataList = bridge.findMethod(FindMethod.create().matcher(matcher));
                 for (MethodData data : dataList) {
+                    if (result.size() >= MAX_METHODS_PER_RULE) break;
                     try {
                         Method m = data.getMethodInstance(cl);
                         if (m != null) result.add(m);
                     } catch (Throwable ignored) {
-                        // Some matches may be hidden API or otherwise unresolvable.
+                        // Hidden API / unresolvable class — skip this match.
                     }
                 }
-            } catch (Throwable t) {
-                // This particular query failed; continue with the other matchers.
+            } catch (Throwable ignored) {
+                // This query failed; continue with the remaining matchers.
             }
         }
         return result;
     }
 
-    private static void applyReturnType(MethodMatcher matcher, HookRule rule) {
+    private static void addMatcher(List<MethodMatcher> matchers, MethodMatcher m) {
+        if (matchers.size() < MAX_MATCHERS) matchers.add(m);
+    }
+
+    private static MethodMatcher methodMatcher(String exactName, String nameFrag, String className,
+                                               HookRule rule) {
+        MethodMatcher m = new MethodMatcher();
+        if (exactName != null) m.name(exactName);
+        if (nameFrag != null) m.name(nameFrag, StringMatchType.Contains, false);
+        if (className != null) m.declaredClass(className.replace('.', '/'), StringMatchType.Contains, false);
         if (rule.returnType != null && !rule.returnType.isEmpty()) {
-            // DexKit expects a class descriptor; dotted Java names use '/' separators.
-            matcher.returnType(rule.returnType.replace('.', '/'));
+            m.returnType(rule.returnType.replace('.', '/'));
         }
+        return m;
+    }
+
+    private static MethodMatcher stringMatcher(String stringConst, String className) {
+        MethodMatcher m = new MethodMatcher();
+        if (className != null) m.declaredClass(className.replace('.', '/'), StringMatchType.Contains, false);
+        m.addUsingString(stringConst, StringMatchType.Contains, false);
+        return m;
+    }
+
+    private static String[] nonEmpty(String[] arr) {
+        if (arr == null) return new String[0];
+        List<String> out = new ArrayList<>();
+        for (String s : arr) if (s != null && !s.isEmpty()) out.add(s);
+        return out.toArray(new String[0]);
     }
 }

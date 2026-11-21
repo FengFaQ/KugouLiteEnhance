@@ -47,6 +47,7 @@ public final class HookConfig {
                     rule.methodName = optStringArray(target, "methodName");
                     rule.methodNameContains = optStringArray(target, "methodNameContains");
                     rule.classNameContains = optStringArray(target, "classNameContains");
+                    rule.stringConstants = optStringArray(target, "stringConstants");
                     rule.returnType = target.optString("returnType", "");
                     rule.nativeLibrary = target.optString("nativeLibrary", "");
                 }

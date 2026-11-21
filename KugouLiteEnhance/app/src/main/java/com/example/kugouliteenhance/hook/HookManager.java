@@ -55,6 +55,8 @@ public final class HookManager {
         // Hooks that resolve targets through DexKit
         if ("ActivityLaunchHook".equals(rule.type)) return new ActivityLaunchHook(rule);
         if ("NativeHook".equals(rule.type)) return new NativeHook(rule);
+        // Ported 2.5.5 auto-claim-VIP flow (reward flag + report window normalization)
+        if ("AutoClaimVipHook".equals(rule.type)) return new AutoClaimVipHook(rule, bridge, classLoader);
 
         Set<Method> targets = DexKitHelper.findMethods(bridge, classLoader, rule);
         if (targets.isEmpty()) {

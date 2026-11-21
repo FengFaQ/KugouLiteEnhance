@@ -11,6 +11,7 @@ public final class HookRule {
     public String[] methodName = new String[0];
     public String[] methodNameContains = new String[0];
     public String[] classNameContains = new String[0];
+    public String[] stringConstants = new String[0];
     public String returnType = "";
     public String nativeLibrary = "";
 

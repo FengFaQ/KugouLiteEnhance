@@ -1,5 +1,5 @@
 {
-  "_comment": "酷狗概念版增强模块 - hook 特征配置。基于对啄木鸟_1.0.5.apk LXposed/Woodpecker/kugoulite/ 包的分析。混淆类名随版本变化，按特征匹配而非硬编码。",
+  "_comment": "酷狗概念版增强模块 - hook 特征配置。锚点基于 5.3.21 (versionCode 11620) 实测 DEX/jadx 证据与啄木鸟_1.0.5 LXposed/Woodpecker/kugoulite/ 分析；按特征匹配而非硬编码混淆类名。",
   "targetPackages": ["com.kugou.android.lite"],
   "hooks": [
     {
@@ -7,7 +7,11 @@
       "type": "ReturnConstantHook",
       "description": "去除首页 Banner 广告",
       "enabled": true,
-      "target": { "methodName": ["getBanner", "loadBanner", "showBanner"], "returnType": "android.view.View" },
+      "target": {
+        "classNameContains": ["FlowBannerView", "YuekuBannerAdapter", "AdBannerBean"],
+        "methodName": ["getBanner", "renderBannerView"],
+        "stringConstants": ["home_getbannerpics"]
+      },
       "value": null
     },
     {
@@ -15,7 +19,10 @@
       "type": "ReturnConstantHook",
       "description": "去除搜索页 Banner 广告",
       "enabled": true,
-      "target": { "methodName": ["getSearchBanner", "showSearchAd"], "returnType": "android.view.View" },
+      "target": {
+        "classNameContains": ["SearchBannerController", "SearchBannerAdapter", "BannerAdView"],
+        "stringConstants": ["SearchBannerController"]
+      },
       "value": null
     },
     {
@@ -23,7 +30,11 @@
       "type": "ReturnConstantHook",
       "description": "去除 TMEAB 广告",
       "enabled": true,
-      "target": { "methodNameContains": ["TMEAd", "TMEAB"], "returnType": "boolean" },
+      "target": {
+        "classNameContains": ["TMEABManager", "TMEABProtocol", "FeeABConfig"],
+        "stringConstants": ["TMEAB0ad0type", "TMEAB0sppk0type"],
+        "methodNameContains": ["TMEAd", "TMEAB"]
+      },
       "value": false
     },
     {
@@ -31,7 +42,10 @@
       "type": "ReturnConstantHook",
       "description": "去除播放页左下角小广告",
       "enabled": true,
-      "target": { "methodNameContains": ["PlayPageAd", "MiniAd"], "returnType": "android.view.View" },
+      "target": {
+        "classNameContains": ["PlayerWidgetAd", "PlayerUseAd"],
+        "stringConstants": ["tme_ad_min_card_ad_vip", "tme_ad_mid_card_ad_vip_view_stub"]
+      },
       "value": null
     },
     {
@@ -39,15 +53,21 @@
       "type": "ReturnConstantHook",
       "description": "关闭自动更新检测",
       "enabled": true,
-      "target": { "methodName": ["checkUpdate", "getUpdateInfo", "requestUpdate"], "returnType": "void" },
+      "target": {
+        "classNameContains": ["KGUpdateInterface", "UpdateAppDialog"],
+        "methodName": ["checkUpdate", "getUpdateInfo", "requestUpdate"]
+      },
       "value": null
     },
     {
       "id": "close_youth_dialog",
       "type": "ReturnConstantHook",
-      "description": "关闭青年弹窗",
+      "description": "关闭青年弹窗（5.3.21 使用 Young 命名，非 Youth/Teen）",
       "enabled": true,
-      "target": { "methodNameContains": ["YouthDialog", "TeenDialog"], "returnType": "void" },
+      "target": {
+        "classNameContains": ["YoungCommDialog", "YoungModeTipDialog", "YoungMainSelectDialog", "YoungModeProtocol"],
+        "stringConstants": ["YoungMode", "UI_MSG_SHOW_YOUNGMODE_DIALOG"]
+      },
       "value": null
     },
     {
@@ -55,15 +75,22 @@
       "type": "ReturnConstantHook",
       "description": "拦截 VIP 到期卡片",
       "enabled": true,
-      "target": { "methodNameContains": ["VipExpire", "VipCard"], "returnType": "java.util.List" },
+      "target": {
+        "methodName": ["getPaidVipExpireTime", "getVipCardInfo"],
+        "methodNameContains": ["VipExpire", "VipCard"],
+        "stringConstants": ["kg_vip_expire_dialog", "EXPIRED_VIP", "vip_expired_tips"]
+      },
       "value": null
     },
     {
       "id": "remove_lab_entry",
       "type": "ReturnConstantHook",
-      "description": "移除发现页概念实验室",
+      "description": "移除发现页概念实验室（5.3.21: DiscoveryCardLabProtocol, card_id=3105）",
       "enabled": true,
-      "target": { "methodNameContains": ["LabCard", "ConceptLab"], "returnType": "java.util.List" },
+      "target": {
+        "classNameContains": ["DiscoveryCardLabProtocol"],
+        "stringConstants": ["lab_feature_list", "young.discovery.rec_card_lab", "3105"]
+      },
       "value": null
     },
     {
@@ -71,35 +98,58 @@
       "type": "ActivityLaunchHook",
       "description": "重写跳过引导页逻辑",
       "enabled": true,
-      "target": { "classNameContains": ["Guide", "SplashGuide", "Welcome"] }
+      "target": {
+        "classNameContains": ["startguide.GuideActivity", "GuideActivity", "NewUserGuideDialog"],
+        "stringConstants": ["skip show guide", "mGuideActivityStarted"]
+      }
     },
     {
       "id": "skip_splash_ad",
       "type": "MethodAfterHook",
       "description": "重写去除启动页广告逻辑",
       "enabled": true,
-      "target": { "methodNameContains": ["SplashAd", "LaunchAd"], "returnType": "void" }
+      "target": {
+        "classNameContains": ["SplashActivity", "ForeSplashActivity", "AdContainerActivity", "SplashLiteGetAdConfigProtocol", "SplashAdPrefs"]
+      }
     },
     {
       "id": "h5_intercept",
       "type": "MethodReplaceHook",
-      "description": "重写 H5 界面拦截（网络繁忙请稍后重试）",
+      "description": "重写 H5 界面拦截（原'网络繁忙请稍后重试'文案在 5.3.21 疑似被 redfail 体系替代）",
       "enabled": true,
-      "target": { "methodNameContains": ["H5", "WebViewLoad"], "returnType": "boolean" }
+      "target": {
+        "classNameContains": ["H5LoadInfo", "RedFailDelegate", "IH5Processor", "RedFailReporter"],
+        "stringConstants": ["WebViewClient onReceivedError", "redfail"]
+      }
     },
     {
       "id": "bypass_signature_java",
       "type": "FieldFlagHook",
       "description": "绕过 JAVA 层签名校验",
       "enabled": true,
-      "target": { "methodNameContains": ["checkSignature", "verifySign", "getSignature"] }
+      "target": {
+        "methodName": ["checkSignature", "getSignature", "verifySignature", "getSignatureMd5"],
+        "methodNameContains": ["checkSignature", "verifySign"]
+      }
     },
     {
       "id": "bypass_signature_so",
       "type": "NativeHook",
-      "description": "绕过 SO 层签名校验（需随包提供 libkgsignaturehook.so；本工程提供接口占位）",
+      "description": "SO 层签名校验：5.3.21 已无 libkgsignaturehook.so；候选替换为 kgkey/jnihook/shadowhook（需运行时确认；默认关闭）",
       "enabled": false,
-      "target": { "nativeLibrary": "kgsignaturehook" }
+      "target": { "nativeLibrary": "kgkey" }
+    },
+    {
+      "id": "auto_claim_vip",
+      "type": "AutoClaimVipHook",
+      "description": "【2.5.5 移植】看广告领VIP自动化：强制 GDT 激励广告奖励标志 + 归一化 play_report 上报时长(>=15s)。注意：VIP 由服务端 award_vip_hour 发放，本 hook 仅自动化客户端流程，无法绕过服务端校验/风控。详见 VIP_2.5.5_ANALYSIS.md 第6节。",
+      "enabled": true,
+      "target": {
+        "methodName": ["a", "report"],
+        "classNameContains": ["getvip", "TangramRewardADListener", "lite/a/e"],
+        "stringConstants": ["play_report", "award_vip_hour"]
+      },
+      "value": { "minDurationMs": 20000 }
     }
   ]
 }

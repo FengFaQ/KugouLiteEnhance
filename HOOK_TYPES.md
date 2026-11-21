@@ -25,6 +25,9 @@
 | 16 | 动态类定位（反混淆基础） | `hookByDexKit` / `hookByCache` / `preloadDexKitCache`（DexKitBridge） | 运行时特征发现 | （支撑以上全部） |
 | 17 | 设置入口注入 | `SettingEntry.init`（+$1..$4） | UI 入口注入 | 模块设置入口 |
 | 18 | 动态 Activity / 反检测 | `DynamicActivity`（ActivityManagerHandler、PackageManagerHandler、ProxyHandlerCallback）、`WoodpeckerActivity` | 动态代理 / 桩 Activity | （支撑/隐藏模块行为） |
+| 19 | 看广告领VIP自动化【2.5.5 移植】 | `com.kugou.android.lite.getvip`（GdtSeeVideoManager / AdPlayReportProtocol / IGetVipListener） | 奖励标志强制 + 上报时长归一化 | 自动获取 VIP（见 `VIP_2.5.5_ANALYSIS.md`） |
+
+> **第 19 项说明（重要）**：2.5.5 的"自动领取 VIP"本质是**看激励广告领 VIP**：客户端 `GdtSeeVideoManager` 播放 GDT 激励视频，回调后由 `AdPlayReportProtocol` POST `https://gateway.kugou.com/youth/v1/ad/play_report`，**服务端**依据 `award_vip_hour` 真正发放 VIP。因此客户端 hook **只能自动化"强制奖励标志 + 归一化上报时长(≥15s)"的流程，无法绕过服务端校验直接发放 VIP**。独立模块以 `AutoClaimVipHook` 实现可行的客户端部分，并如实标注服务端限制。
 
 ## 手法分类说明（独立模块要实现的"hook 类型"抽象）
 
@@ -33,8 +36,9 @@
 3. **MethodAfterHook** —— 在目标方法执行后修改结果（启动页广告 native 跳过的 Java 对应物）。
 4. **ActivityLaunchHook** —— hook `Activity.startActivity` 系列（Intent、Intent+Bundle 等重载），拦截/替换启动（引导页）。
 5. **FieldFlagHook** —— 修改字段/方法的访问标志与校验布尔（签名校验 JAVA 层）。
-6. **DexKitDiscovery** —— 按方法名/字符串/返回类型/调用引用等特征在运行时定位被混淆的目标类与方法。
+6. **DexKitDiscovery** —— 按方法名/字符串/返回类型/调用引用等特征在运行时定位被混淆的目标类与方法。支持 `classNameContains`（类名片段）与 `stringConstants`（方法体内字符串常量）两类锚点，跨版本混淆改名后仍可命中。
 7. **NativeHook** —— 通过 shadowhook / JNI 注册在 SO 层拦截（签名校验 SO 层、启动页广告）。
+8. **AutoClaimVipHook** —— 2.5.5 移植：强制激励广告奖励标志（反射置 boolean 字段为 true）+ 归一化 `play_report` 的 `play_start/play_end` 到 ≥15s；基于字符串锚点（`play_report`/`award_vip_hour`/`激励领取成功~`）定位目标方法，适应 5.3.21 类名变化。**不绕过服务端发放**。
 
 ## 配置驱动
 
@@ -49,9 +53,14 @@
     { "id": "skip_guide", "type": "ActivityLaunchHook", "enabled": true,
       "target": { "className": ["GuideActivity"] } },
     { "id": "bypass_signature_java", "type": "FieldFlagHook", "enabled": true,
-      "target": { "methodName": ["checkSignature"] } }
+      "target": { "methodName": ["checkSignature"] } },
+    { "id": "auto_claim_vip", "type": "AutoClaimVipHook", "enabled": true,
+      "target": { "methodName": ["a", "report"],
+                  "classNameContains": ["getvip", "TangramRewardADListener"],
+                  "stringConstants": ["play_report", "award_vip_hour"] },
+      "value": { "minDurationMs": 20000 } }
   ]
 }
 ```
 
-这样同一套代码可适配酷狗概念版不同版本（混淆类名变化只需改配置）。
+这样同一套代码可适配酷狗概念版不同版本（混淆类名变化只需改配置）。配套的 `stringConstants` 锚点基于方法体内字符串常量，即使类名被完全重写（如 2.5.5→5.3.21 的 `com.kugou.android.lite.a.*` 消失）仍能定位目标。
